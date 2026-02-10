@@ -13,15 +13,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Fix git safe directory
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git
 
       - name: Install Python dependencies
         run: |
@@ -30,19 +29,24 @@ jobs:
 
       - name: Debug – list files
         run: |
-          echo "Current directory:"
           pwd
-          echo "Files:"
           ls -l
+
+      - name: Make setup script executable
+        run: |
+          chmod +x setup_repository.sh
 
       - name: Setup repository
         run: |
-          chmod +x setup_repository.sh
           ./setup_repository.sh
 
       - name: Run agent
         run: |
           python run_agent.py
+
+      - name: Restore committed artifacts (ignore if missing)
+        run: |
+          git checkout pre_verification.log post_verification.log result.json prompts.md agent.log changes.patch || true
 
       - name: Extract metrics
         run: |
@@ -53,6 +57,6 @@ jobs:
         with:
           name: swebench-results
           path: |
-            outputs/
             *.json
             *.log
+            outputs/
