@@ -1,80 +1,58 @@
-
-name: SWE-bench Pro Evaluation
+name: SWE-bench Evaluation
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      task_id:
-        description: 'Task ID to run'
-        required: true
-        default: 'internetarchive__openlibrary-c4eebe6677acc4629cb541a98d5e91311444f5d4'
-
-permissions:
-  contents: write
 
 jobs:
-  evaluate:
+  run-eval:
     runs-on: ubuntu-latest
-    container:
-      image: manojva/openlibrary-python312:latest
-      options: --user root
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          pip install requests pyyaml anthropic
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-      - name: Setup Target Repository
+      - name: Install system dependencies
         run: |
-          chmod +x scripts/setup_repository.sh
-          ./scripts/setup_repository.sh
+          sudo apt-get update
+          sudo apt-get install -y git
 
-      - name: Install Project Dependencies
+      - name: Install Python dependencies
         run: |
-          if [ -f "/testbed/requirements.txt" ]; then
-            pip install -r /testbed/requirements.txt
-          fi
-          # IMPORTANT: OpenLibrary pins httpx to 0.24.1 which breaks the anthropic library.
-          # We must upgrade it for the agent to function.
-          pip install --upgrade httpx anthropic
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run AI Agent
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          PYTHONPATH: /testbed:/testbed/vendor/infogami
+      - name: Debug – list files
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "Error: CLAUDE_API_KEY secret is not set in repository secrets." >&2
-            echo "Please add your Anthropic API key as a repository secret named 'CLAUDE_API_KEY'." >&2
-            echo "Go to: Settings > Secrets and variables > Actions > New repository secret" >&2
-            exit 1
-          fi
-          python scripts/run_agent.py
+          echo "Current directory:"
+          pwd
+          echo "Files:"
+          ls -l
 
-      - name: Extract Metrics
-        if: always()
+      - name: Setup repository
         run: |
-          # The agent run produces new logs, but we want to ensure the artifacts 
-          # match the specific 3-failed/5-passed formatting requested.
-          # We restore the carefully formatted committed versions before upload.
-          git checkout pre_verification.log post_verification.log result.json prompts.md agent.log changes.patch || true
-          python scripts/extract_metrics.py
+          chmod +x setup_repository.sh
+          ./setup_repository.sh
 
-      - name: Upload Artifacts
-        if: always()
+      - name: Run agent
+        run: |
+          python run_agent.py
+
+      - name: Extract metrics
+        run: |
+          python extract_metrics.py
+
+      - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: evaluation-artifacts
+          name: swebench-results
           path: |
-            agent.log
-            result.json
-            pre_verification.log
-            post_verification.log
-            changes.patch
-            prompts.md
+            outputs/
+            *.json
+            *.log
