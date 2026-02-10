@@ -1,1 +1,17 @@
 
+diff --git a/openlibrary/core/imports.py b/openlibrary/core/imports.py
+index 84cc4ed..c4eebe6 100644
+--- a/openlibrary/core/imports.py
++++ b/openlibrary/core/imports.py
+@@ -10,6 +10,12 @@ from openlibrary.core.models import ImportItem
+ 
++STAGED_SOURCES = ('amazon', 'idb')
++
++    @staticmethod
++    def find_staged_or_pending(identifiers, sources=STAGED_SOURCES):
++        """
++        Find staged or pending items for the given identifiers and sources.
++        """
++        ia_ids = [f"{source}:{identifier}" for source in sources for identifier in identifiers]
++        return ImportItem.query.filter(ImportItem.ia_id.in_(ia_ids), ImportItem.status.in_(['staged', 'pending'])).all()
++

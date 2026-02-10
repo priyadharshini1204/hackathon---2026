@@ -1,0 +1,3 @@
+{"timestamp": "2024-01-20T10:00:00Z", "type": "request", "content": "Fix ISBN import logic"}
+{"timestamp": "2024-01-20T10:00:10Z", "type": "response", "content": "I will fix it using local staged records.", "usage": {"input_tokens": 15000, "output_tokens": 2000}}
+{"timestamp": "2024-01-20T10:00:15Z", "type": "tool_use", "tool": "git_apply", "args": {"patch_length": 1500}}

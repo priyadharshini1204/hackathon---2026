@@ -16,19 +16,27 @@ def parse_pytest_output(content):
     """
     Parse pytest output to find number of passed/failed tests.
     """
+    if not content:
+        return {"passed": 0, "failed": 0, "error": False}
+
     if "no tests ran" in content or "ERROR" in content:
-        # Check for specific failure in setup
         if "collected 0 items" in content:
              return {"passed": 0, "failed": 0, "error": True}
 
     # Look for the final summary line: "== 1 failed, 4 passed in 0.12s =="
-    match = re.search(r"=+\s+(?:(\d+)\s+failed,?)?\s*(?:(\d+)\s+passed,?)?.*=+", content)
-    if match:
-        failed = int(match.group(1)) if match.group(1) else 0
-        passed = int(match.group(2)) if match.group(2) else 0
-        return {"passed": passed, "failed": failed, "error": False}
+    # Try a more robust search
+    passed = 0
+    failed = 0
+    
+    failed_match = re.search(r"(\d+)\s+failed", content)
+    if failed_match:
+        failed = int(failed_match.group(1))
         
-    return {"passed": 0, "failed": 0, "error": False}
+    passed_match = re.search(r"(\d+)\s+passed", content)
+    if passed_match:
+        passed = int(passed_match.group(1))
+        
+    return {"passed": passed, "failed": failed, "error": False}
 
 def main():
     start_time = None
